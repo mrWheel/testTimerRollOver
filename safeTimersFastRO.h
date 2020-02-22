@@ -1,3 +1,16 @@
+
+uint16_t timer16Bit()
+{
+  return ((millis() & 0b1111111111111111)); // only 16 bits
+  
+} // timer16Bit()
+
+uint32_t timer32Bit()
+{
+  return (uint32_t)(micros() + (UINT32_MAX - (5*60*1000*1000))); // first rollover after 5 minutes
+  
+} // timer32Bit()
+
 /* 
 ***************************************************************************  
 **  Filename  : safeTimers.h
@@ -7,7 +20,6 @@
 **  TERMS OF USE: MIT License. See bottom of file.                                                            
 ***************************************************************************      
 */
-
 
 /*
  * safeTimers.h (original name timers.h) is developed by Erik
@@ -28,9 +40,9 @@
  *    <timername>_type (byte)
  * 
  * <timerType> can either be:
- *   SKIP_MISSED_EVENTS
- *   CATCH_UP_MISSED_EVENTS
- *   SKIP_MISSED_EVENTS_WITH_SYNC 
+ *   SKIP_MISSED_TICKS
+ *   CATCH_UP_MISSED_TICKS
+ *   SKIP_MISSED_TICKS_WITH_SYNC 
  * 
  * TIME_LEFT_MIN(timerName)
  *  returns the time left in minutes
@@ -60,7 +72,7 @@
  *  
  *  Usage example:
  *  
- *  DECLARE_TIMER(screenUpdate, 200, SKIP_MISSED_EVENTS)          // update screen every 200 ms
+ *  DECLARE_TIMER(screenUpdate, 200, SKIP_MISSED_TICKS)          // update screen every 200 ms
  *  ...
  *  loop()
  *  {
@@ -70,7 +82,7 @@
  *    }
  *    
  *    // to change the screenUpdate interval:
- *    CHANGE_INTERVAL(screenUpdate, 500, CATCH_UP_MISSED_EVENTS); // change interval to 500 ms
+ *    CHANGE_INTERVAL(screenUpdate, 500, CATCH_UP_MISSED_TICKS); // change interval to 500 ms
  *    
  *    // to restart the screenUpdate interval:
  *    RESTART_TIMER(screenUpdate);                                // restart timer so next DUE is in 500ms
@@ -79,53 +91,44 @@
 */
 
 //--- timerType's -----------------------
-#define SKIP_MISSED_EVENTS              0
-#define CATCH_UP_MISSED_EVENTS          1
-#define SKIP_MISSED_EVENTS_WITH_SYNC     2
+#define SKIP_MISSED_TICKS              0
+#define SKIP_MISSED_TICKS_WITH_SYNC    1
+#define CATCH_UP_MISSED_TICKS          2
 
 
 #define DECLARE_TIMER_MIN(timerName, ...) \
-                      static uint32_t timerName##_interval = (getParam(0, __VA_ARGS__, 0) * 60 * 1000 * 1000),\
-                                      timerName##_due  = micros()               \
-                                                       +timerName##_interval               \
-                                                       +random(timerName##_interval / 3);  \
+                      static uint32_t timerName##_interval = (getParam(0, __VA_ARGS__, 0) * 60 * 1000 * 1000), \
+                                      timerName##_due  = timer32Bit() \
+                                                       +timerName##_interval \
+                                                       +random(timerName##_interval / 3); \
                       static byte     timerName##_type = getParam(1, __VA_ARGS__, 0);
 
 #define DECLARE_TIMER_SEC(timerName, ...) \
-                      static uint32_t timerName##_interval = (getParam(0, __VA_ARGS__, 0) * 1000 * 1000),\
-                                      timerName##_due  = micros()               \
-                                                       +timerName##_interval               \
-                                                       +random(timerName##_interval / 3);  \
+                      static uint32_t timerName##_interval = (getParam(0, __VA_ARGS__, 0) * 1000 * 1000), \
+                                      timerName##_due  = timer32Bit() \
+                                                       +timerName##_interval \
+                                                       +random(timerName##_interval / 3); \
                       static byte     timerName##_type = getParam(1, __VA_ARGS__, 0);
 
 #define DECLARE_TIMER_MS(timerName, ...)  \
-                      static uint32_t timerName##_interval = (getParam(0, __VA_ARGS__, 0) * 1000),\
-                                      timerName##_due  = micros()               \
-                                                       +timerName##_interval               \
-                                                       +random(timerName##_interval / 3);  \
+                      static uint32_t timerName##_interval = (getParam(0, __VA_ARGS__, 0) * 1000), \
+                                      timerName##_due  = timer32Bit() \
+                                                       +timerName##_interval \
+                                                       +random(timerName##_interval / 3); \
                       static byte     timerName##_type = getParam(1, __VA_ARGS__, 0);
 
 #define DECLARE_TIMER   DECLARE_TIMER_MS
 
 
 #define CHANGE_INTERVAL_MIN(timerName, ...) \
-                                      timerName##_interval = (getParam(0, __VA_ARGS__, 0) *60*1000*1000),\
-                                      timerName##_due  = micros()                          \
-                                                       +timerName##_interval               \
-                                                       +random(timerName##_interval / 3);  \
-                                      timerName##_type = getParam(1, __VA_ARGS__, 0);
+                                      timerName##_interval = (getParam(0, __VA_ARGS__, 0) *60*1000*1000); \
+                                      timerName##_due  = timer32Bit() +timerName##_interval;
 #define CHANGE_INTERVAL_SEC(timerName, ...) \
-                                      timerName##_interval = (getParam(0, __VA_ARGS__, 0) *1000*1000),\
-                                      timerName##_due  = micros()                          \
-                                                       +timerName##_interval               \
-                                                       +random(timerName##_interval / 3);  \
-                                      timerName##_type = getParam(1, __VA_ARGS__, 0);
+                                      timerName##_interval = (getParam(0, __VA_ARGS__, 0) *1000*1000), \
+                                      timerName##_due  = timer32Bit() +timerName##_interval;
 #define CHANGE_INTERVAL_MS(timerName, ...)  \
-                                      timerName##_interval = (getParam(0, __VA_ARGS__, 0) *1000),\
-                                      timerName##_due  = micros()                          \
-                                                       +timerName##_interval               \
-                                                       +random(timerName##_interval / 3);  \
-                                      timerName##_type = getParam(1, __VA_ARGS__, 0);
+                                      timerName##_interval = (getParam(0, __VA_ARGS__, 0) *1000), \
+                                      timerName##_due  = timer32Bit() +timerName##_interval;
 
 #define CHANGE_INTERVAL CHANGE_INTERVAL_MS
 
@@ -139,33 +142,39 @@
 #define TIME_PAST_SEC(timerName)      ( (TIME_PAST(timerName) / 1000) )
 #define TIME_PAST_MIN(timerName)      ( (TIME_PAST(timerName) / (60*1000)) )
 
-#define RESTART_TIMER(timerName)      ( timerName##_due = micros()+timerName##_interval ); 
+#define RESTART_TIMER(timerName)      ( timerName##_due = timer32Bit()+timerName##_interval ); 
 
 #define DUE(timerName)                ( __Due__(timerName##_due, timerName##_interval, timerName##_type) )
 
 
 uint32_t __Due__(uint32_t &timer_due, uint32_t timer_interval, byte timerType)
 {
-  if ((int32_t)(micros() - timer_due) >= 0) 
+  if ((int32_t)(timer32Bit() - timer_due) >= 0) 
   {
     switch (timerType) {
-        case CATCH_UP_MISSED_EVENTS:   
+        case CATCH_UP_MISSED_TICKS:   
                   timer_due += timer_interval;
                   break;
-        case SKIP_MISSED_EVENTS_WITH_SYNC:
-                  // this will calculate the next due, and skips passed due events 
-                  // (missing due events)
-                  // timer_due +=  (((uint32_t)(( timer_due - micros()) / timer_interval)+1) *timer_interval);
-                  while ((int32_t)(micros() - timer_due) >= 0) 
+
+        case SKIP_MISSED_TICKS_WITH_SYNC:
+                  if ( (timer32Bit() - timer_due) >= (timer_interval * 0.05) )
                   {
                     timer_due  += timer_interval;
+                    return 0;
+                  }
+                  while ((int32_t)(timer32Bit() - timer_due) >= 0) 
+                  {
+                    timer_due  += timer_interval;
+                    yield();
                   }
                   break;
-        // SKIP_MISSED_EVENTS is default
-        default:  timer_due = micros() + timer_interval;
+
+        default:  // SKIP_MISSED_TICKS
+                  timer_due = timer32Bit() + timer_interval;
                   break;
-    }
-    return timer_due;  
+    } // switch()
+    
+    return (uint32_t)timer_due;  
   }
   
   return 0;
@@ -177,49 +186,42 @@ uint32_t __TimeLeft__(uint32_t timer_due)
 {
   uint32_t tmp;
   byte state = 0;
-
-  // timeline 0---------------------------SIGNED-MAX-----------------------UMAX
-  // state=0  0----------------------------T--+--D-------------------------UMAX
-  // state=0  0----------------------------d--+--t-------------------------UMAX
-  // state=0  0-------------------------------+-------------T-------D------UMAX
-  // state=0  0-------------------------------+-------------d--t-----------UMAX
-  // state=0  0-------T-D---------------------+----------------------------UMAX
-  // state=0  0---------d--t------------------+----------------------------UMAX
-    
-  // state=1  0---T---------------------------+---------------------D------UMAX
-  if (timer_due > INT32_MAX && micros() < INT32_MAX)  state = 1;  // timer() rolled-over
   
-  // state=2  0---D---------------------------+-------------------------T--UMAX
-  if (timer_due < INT32_MAX && micros() > INT32_MAX)  state = 2;  // timer_due rolled-over
+  // timeline 0-------------------------SIGNED-MAX-------------------------UMAX
+  // state=0  0---------------------------T-|---D--------------------------UMAX
+  // state=0  0-----------------------------|---------------T-------D------UMAX
+  // state=0  0-------T-D-------------------|------------------------------UMAX
+    
+  // state=1  0---T<========INT32_MAX========>-------------------------D---UMAX
+  if ( timer_due > (timer32Bit() + INT32_MAX) ) state = 1;  // timer() rolled-over
+  
+  // state=2  0--------D<========INT32_MAX========>---------------T--------UMAX
+  if ( timer32Bit() > (timer_due + INT32_MAX) ) state = 2;  // _due rolled-over
 
   switch(state) {
-      case 0:     if ( (int32_t)(timer_due - micros()) >= 0 )
-                        tmp = timer_due - micros();
-                  else  tmp = 0;
-                  break;
-                  //--- micros() rolled-over -------------------------------
-      case 1:     if ( (int32_t)((timer_due + UINT32_MAX) - micros()) >= 0 )
-                        tmp = (timer_due + UINT32_MAX) - micros();
-                  else  tmp = 0;
-                  break;
-                  //--- timer_due rolled-over ------------------------------
-      case 2:     if ( (int32_t)(timer_due - (micros() + UINT32_MAX)) >= 0 )
-                        tmp = timer_due - (micros() + UINT32_MAX);
-                  else  tmp = 0;
-                  break;
-      default:    tmp = 0;
+        case 1:     //--- timer16Bit() rolled-over
+        case 2:     //--- _due rolled-over
+                    if ( (int32_t)((timer_due + UINT32_MAX) - timer32Bit()) >= 0 )
+                          tmp = (timer_due + UINT32_MAX) - timer32Bit();
+                    else  tmp = 0;
+                    break;
+        default:    if ( (int32_t)(timer_due - timer32Bit()) >= 0 )
+                          tmp = timer_due - timer32Bit();
+                    else  tmp = 0;
   }
 
-  return tmp;
+  return (uint32_t)tmp;
   
 } // __TimeLeft__()
+
 
 // process variadic from macro's
 uint32_t getParam(int i, ...) 
 {
   uint32_t parm, p;
   va_list vl;
-  va_start(vl,p);
+  //va_start(vl,p); // warning: second parameter of 'va_start' not last named argument [-Wvarargs] 
+  va_start(vl,i);
   for (p=0; p<=i; p++)
   {
     parm=va_arg(vl,uint32_t);
@@ -232,27 +234,18 @@ uint32_t getParam(int i, ...)
  * ******************** 16 bit timers macro's for testing purposes *********************************
  */
 
-uint16_t timer16Bit()
-{
-  return ((millis() & 0b1111111111111111)); // only 16 bits
-  
-} // timer16Bit()
-
 #define DECLARE_TIMER_16BIT(timerName, ...)  \
-                      static uint16_t timerName##_interval = getParam(0, __VA_ARGS__, 0),     \
-                                      timerName##_due  = timer16Bit()                         \
-                                                        +timerName##_interval                 \
-                                                        +random(timerName##_interval / 3);    \
-                      static byte     timerName##_type = getParam(1, __VA_ARGS__, 0);
+                        static uint16_t timerName##_interval = getParam(0, __VA_ARGS__, 0), \
+                                        timerName##_due  = timer16Bit() \
+                                                          +timerName##_interval \
+                                                          +random(timerName##_interval / 3); \
+                        static byte     timerName##_type = getParam(1, __VA_ARGS__, 0);
 
 #define CHANGE_16BIT_INTERVAL(timerName, ...) \
-                                      timerName##_interval = (getParam(0, __VA_ARGS__, 0) ),  \
-                                      timerName##_due  = timer16Bit()                         \
-                                                        +timerName##_interval                 \
-                                                        +random(timerName##_interval / 3);    \
-                                      timerName##_type = getParam(1, __VA_ARGS__, 0);
+                                        timerName##_interval = (getParam(0, __VA_ARGS__, 0) ); \
+                                        timerName##_due  = timer16Bit() +timerName##_interval;
                                                     
-#define RESTART_TIMER_16BIT(timerName)  timerName##_due = timer16Bit()+timerName##_interval;
+#define RESTART_TIMER_16BIT(timerName)  timerName##_due = timer16Bit() +timerName##_interval;
 
 #define TIME_LEFT_16BIT(timerName)      ( __TimeLeft16Bit__(timerName##_due) ) 
 #define TIME_LEFT_SEC_16BIT(timerName)  ( (TIME_LEFT_16BIT(timerName) / 1000) )
@@ -260,8 +253,8 @@ uint16_t timer16Bit()
 #define TIME_PAST_16BIT(timerName)      ( (timerName##_interval - TIME_LEFT_16BIT(timerName)) )
 #define TIME_PAST_SEC_16BIT(timerName)  ( (TIME_PAST_16BIT(timerName) / 1000) )
 
-#define DUE_16BIT(timerName)            ( __Due16Bit__(timerName##_due               \
-                                                         , timerName##_interval       \
+#define DUE_16BIT(timerName)            ( __Due16Bit__(timerName##_due \
+                                                         , timerName##_interval \
                                                          , timerName##_type) )
 
 
@@ -270,24 +263,29 @@ uint16_t __Due16Bit__(uint16_t &timer_due, uint16_t timer_interval, byte timerTy
   if ((int16_t)(timer16Bit() - timer_due) >= 0) 
   {
     switch (timerType) {
-        case CATCH_UP_MISSED_EVENTS:   
-                  timer_due += timer_interval;
-                  break;
-        case SKIP_MISSED_EVENTS_WITH_SYNC:
-                  // this will calculate the next due, and skips passed due 
-                  // events (missing due events)
-                  // timer_due +=  (((uint32_t)(( timer_due - micros()) / timer_interval)+1) *timer_interval);
+        case SKIP_MISSED_TICKS_WITH_SYNC:
+                  if ( (timer16Bit() - timer_due) >= (timer_interval * 0.05) )
+                  {
+                    timer_due  += timer_interval;
+                    return 0;
+                  }
                   while ((int16_t)(timer16Bit() - timer_due) >= 0) 
                   {
                     timer_due  += timer_interval;
+                    yield();
                   }
                   break;
-        // SKIP_MISSED_EVENTS is default
-        default:  timer_due = timer16Bit() + timer_interval;
+
+        case CATCH_UP_MISSED_TICKS:   
+                  timer_due += timer_interval;
+                  break;
+
+        default:  // SKIP_MISSED_TICKS
+                  timer_due = timer16Bit() + timer_interval;
                   break;
     } // switch()
     
-    return timer_due;  
+    return (uint16_t)timer_due;  
   }
   
   return 0;
@@ -297,67 +295,35 @@ uint16_t __Due16Bit__(uint16_t &timer_due, uint16_t timer_interval, byte timerTy
 
 uint16_t __TimeLeft16Bit__(uint16_t timer_due)
 {
-  uint16 tmp;
+  uint16_t tmp;
   byte state = 0;
 
-  // timeline 0---------------------------SIGNED-MAX-----------------------UMAX
-  // state=0  0----------------------------T--+--D-------------------------UMAX
-  // state=0  0----------------------------d--+--t-------------------------UMAX
-  // state=0  0-------------------------------+-------------T-------D------UMAX
-  // state=0  0-------------------------------+-------------d--t-----------UMAX
-  // state=0  0-------T-D---------------------+----------------------------UMAX
-  // state=0  0---------d--t------------------+----------------------------UMAX
+  // timeline 0-------------------------SIGNED-MAX-------------------------UMAX
+  // state=0  0---------------------------T-|---D--------------------------UMAX
+  // state=0  0-----------------------------|---------------T-------D------UMAX
+  // state=0  0-------T-D-------------------|------------------------------UMAX
     
-  // state=1  0---T---------------------------+---------------------D------UMAX
-  if (timer_due > INT16_MAX && timer16Bit() < INT16_MAX)  state = 1;  // timer() rolled-over
+  // state=1  0---T<========INT16_MAX========>-------------------------D---UMAX
+  if ( timer_due > (timer16Bit() + INT16_MAX) ) state = 1;  // timer() rolled-over
   
-  // state=2  0---D---------------------------+-------------------------T--UMAX
-  if (timer_due < INT16_MAX && timer16Bit() > INT16_MAX)  state = 2;  // timer_due rolled-over
+  // state=2  0--------D<========INT16_MAX========>---------------T--------UMAX
+  if ( timer16Bit() > (timer_due + INT16_MAX) ) state = 2;  // _due rolled-over
 
   switch(state) {
-      case 0:     if ( (int16_t)(timer_due - timer16Bit()) >= 0 )
-                        tmp = timer_due - timer16Bit();
-                  else  tmp = 0;
-                  break;
-      case 1:     //--- timer16Bit() rolled-over
-                  if ( (int16_t)((timer_due + UINT16_MAX) - timer16Bit()) >= 0 )
-                        tmp = (timer_due + UINT16_MAX) - timer16Bit();
-                  else  tmp = 0;
-                  break;
-      case 2:     //--- timer_due rolled-over
-                  if ( (int16_t)(timer_due - (timer16Bit() + UINT16_MAX)) >= 0 )
-                        tmp = timer_due - (timer16Bit() + UINT16_MAX);
-                  else  tmp = 0;
-                  break;
-      default:    tmp = 0;
+        case 1:     //--- timer16Bit() rolled-over
+        case 2:     //--- _due rolled-over
+                    if ( (int16_t)((timer_due + UINT16_MAX) - timer16Bit()) >= 0 )
+                          tmp = (timer_due + UINT16_MAX) - timer16Bit();
+                    else  tmp = 0;
+                    break;
+        default:    if ( (int16_t)(timer_due - timer16Bit()) >= 0 )
+                          tmp = timer_due - timer16Bit();
+                    else  tmp = 0;
   }
 
-  return tmp;
+  return (uint16_t)tmp;
   
 } // __TimeLeft16Bit__()
-
-/****
-uint16_t __TimeLeft16Bit__(uint16_t timer_due, uint16_t timer_interval)
-{
-  uint16 tmp;
-  if ((timer_due - timer16Bit()) >= 0)
-  {
-    tmp = timer_due - timer16Bit();
-  }
-  else
-  {
-    tmp = ((timer_due+ UINT16_MAX) - timer16Bit());
-  }
-
-  if (tmp >= timer_interval)
-  {
-    tmp = (tmp % timer_interval);
-  }
-  return tmp;
-  
-} // __TimeLeft16Bit__()
-****/
-
 
 /***************************************************************************
 *
